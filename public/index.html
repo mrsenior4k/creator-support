@@ -1,0 +1,287 @@
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<title>Support Creator</title>  
+<style>  
+  body {  
+    font-family: 'Arial', sans-serif;  
+    background: #f0f2f5;  
+    display: flex;  
+    justify-content: center;  
+    align-items: center;  
+    height: 100vh;  
+  }  .card {
+background: #fff;
+border-radius: 16px;
+box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+padding: 30px 40px;
+max-width: 400px;
+width: 100%;
+text-align: center;
+}
+
+h2 {
+margin-bottom: 10px;
+color: #333;
+}
+
+#status {
+margin: 10px 0;
+font-weight: bold;
+color: #007bff;
+}
+
+#countdown {
+margin: 10px 0;
+font-size: 18px;
+color: #d9534f;
+font-weight: bold;
+}
+
+p {
+margin: 5px 0;
+font-size: 16px;
+}
+
+button {
+padding: 12px 20px;
+margin: 10px 5px;
+font-size: 16px;
+border: none;
+border-radius: 10px;
+background: #007bff;
+color: white;
+cursor: pointer;
+transition: all 0.2s ease;
+}
+
+button:hover {
+background: #0056b3;
+}
+
+button:disabled {
+background: #a0c4ff;
+cursor: not-allowed;
+}
+
+#copyBtn {
+background: #28a745;
+}
+
+#copyBtn:hover {
+background: #1e7e34;
+}
+
+#progressContainer {
+width: 100%;
+height: 10px;
+background: #222;
+border-radius: 10px;
+overflow: hidden;
+margin-top: 10px;
+}
+
+#progressBar {
+height: 100%;
+width: 0%;
+background: limegreen;
+transition: width 0.2s linear;
+}
+
+.hidden {
+display: none;
+}
+
+</style>  
+</head>  
+<body>  
+<div class="card" id="main">  
+  <h2 id="title">Support Alex 🎉</h2>  
+  <button onclick="startAd()">Watch Ad</button>  
+  <div id="progressContainer" class="hidden">  
+  <div id="progressBar"></div>  
+</div>  <p id="progressText"></p>  
+  <p id="status"></p>  
+  <p id="countdown"></p>  
+  <p id="count"></p>  
+  <p id="earnings"></p>  
+  <button id="copyBtn" onclick="copyLink()">Copy Link</button>  
+</div> 
+ <script>
+let progressInterval;
+
+const fingerprint = navigator.userAgent + screen.width + screen.height + navigator.platform + Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+function startProgressBar(duration = 15000) {
+  const bar = document.getElementById("progressBar");
+  const container = document.getElementById("progressContainer");
+  const text = document.getElementById("progressText");
+
+  container.classList.remove("hidden");
+
+  let startTime = Date.now();
+
+  progressInterval = setInterval(() => {
+    let elapsed = Date.now() - startTime;
+    let percent = Math.min((elapsed / duration) * 100, 100);
+
+    bar.style.width = percent + "%";
+
+    let secondsLeft = Math.ceil((duration - elapsed) / 1000);
+
+    // ✅ Combined dynamic text + countdown (feels real)
+    if (percent < 30) text.innerText = `Loading ad... (${secondsLeft}s)`;
+    else if (percent < 70) text.innerText = `Watching ad... (${secondsLeft}s)`;
+    else text.innerText = `Almost done... (${secondsLeft}s)`;
+
+    if (percent >= 100) {
+      clearInterval(progressInterval);
+    }
+  }, 100);
+}
+
+function resetProgressBar() {
+  clearInterval(progressInterval);
+  document.getElementById("progressBar").style.width = "0%";
+  document.getElementById("progressContainer").classList.add("hidden");
+  document.getElementById("progressText").innerText = "";
+}
+
+let userId = Date.now();
+const creator = window.location.pathname.substring(1) || "Alex";
+
+// ---------- Load stats ----------
+function loadCount() {
+  fetch(`/count/${creator}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("count").innerText =
+        `${creator} has ${data.count} supports`;
+      document.getElementById("earnings").innerText =
+        `${creator} earned $${data.earnings.toFixed(2)}`;
+    });
+}
+
+// ---------- Countdown ----------
+function showCountdown(seconds) {
+  const countdownElem = document.getElementById("countdown");
+
+  function formatTime(s) {
+    const hours = Math.floor(s / 3600);
+    const minutes = Math.floor((s % 3600) / 60);
+    const secs = s % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  }
+
+  let remaining = seconds;
+
+  countdownElem.innerText = `⏱ Try again in ${formatTime(remaining)}`;
+
+  const interval = setInterval(() => {
+    remaining--;
+
+    countdownElem.innerText = `⏱ Try again in ${formatTime(remaining)}`;
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      countdownElem.innerText = "";
+    }
+  }, 1000);
+}
+
+// ---------- Start Ad ----------
+function startAd() {
+  const btn = document.querySelector("#main button");
+
+  if (window.lastSupportTime) {
+    const diff = Date.now() - window.lastSupportTime;
+    if (diff < 30000) {
+      showCountdown(Math.ceil((30000 - diff) / 1000));
+      return;
+    }
+  }
+
+  btn.disabled = true;
+  document.getElementById("status").innerText = "Ad playing...";
+
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      creator,
+      fingerprint,
+      type: 'ad_start'
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+  resetProgressBar();
+
+  if (!data.success) {
+
+    // 👉 ADD THIS BLOCK
+    if (data.message === "Daily limit reached") {
+      document.getElementById("status").innerText =
+        "🚫 Daily limit reached (3 supports)";
+    }
+
+    showCountdown(data.wait || 30);
+    btn.disabled = false;
+    return;
+  }
+
+    // ✅ start visuals AFTER backend approval
+    startProgressBar(15000);
+
+    setTimeout(() => {
+      completeAd(btn);
+    }, 15000);
+  });
+}
+
+// ---------- COMPLETE AD (🔥 THIS WAS MISSING) ----------
+function completeAd(btn) {
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      creator,
+      fingerprint,
+      type: 'ad_complete'
+    })
+  })
+  .then(() => {
+    document.getElementById("status").innerText = "✅ Support sent!";
+    window.lastSupportTime = Date.now();
+
+    resetProgressBar();
+    loadCount();
+
+    btn.disabled = false;
+  });
+}
+
+// ---------- Copy link ----------
+function copyLink() {
+  const link = window.location.href;
+  navigator.clipboard.writeText(link);
+
+  const btn = document.getElementById("copyBtn");
+  const original = btn.innerText;
+
+  btn.innerText = "✅ Copied!";
+  setTimeout(() => { btn.innerText = original; }, 1500);
+}
+
+// ---------- Init ----------
+loadCount();
+</script>
+ </body>  
+</html>  

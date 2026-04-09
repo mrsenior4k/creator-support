@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Support Creator</title>
+  nano public/index.html
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #0f172a; color: white; padding: 40px; }
+    .box { max-width: 400px; margin: auto; background: #1e293b; padding: 30px; border-radius: 12px; }
+    button { padding: 12px 20px; font-size: 16px; border: none; border-radius: 8px; background: #22c55e; color: white; cursor: pointer; margin-top: 20px; }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+<div class="box" id="main">
+  <h2 id="title"></h2>
+  <p>Watch a short ad to support Alex for free.</p>
+  <button onclick="startAd()">Watch Ad</button>
+</div>
+
+<script>
+const path = window.location.pathname;
+const creator = path.substring(1) || "alex"; // default if no path
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("title").innerText = `Support ${creator} 🎉`;
+});
+let userId = localStorage.getItem('userId');
+
+if (!userId) {
+  userId = Date.now().toString();
+  localStorage.setItem('userId', userId);
+}
+function loadCount() {
+  fetch(`/count/${creator}`)
+    .then(res => res.json())
+    .then(data => {
+      document.getElementById("count").innerText =
+        `${creator} has ${data.count} supports`;
+    });
+}
+
+function sendEvent(type) {
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      creator: 'Alex',
+      user: userId,
+      type: type
+    })
+  });
+}
+
+function startAd() {
+  // disable button instantly to prevent spam
+  document.querySelector("button").disabled = true;
+
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      creator: 'Alex',
+      user: userId,
+      type: 'ad_start'
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+
+    // 🚨 BLOCK BEFORE ANY UI CHANGE
+    if (!data.success) {
+      document.getElementById("main").innerHTML = `
+        <h2>⛔ Slow down</h2>
+        <p>You already supported recently.</p>
+        <button onclick="location.reload()">Go Back</button>
+      `;
+      return;
+    }
+
+    // ONLY runs if allowed
+    document.getElementById("main").innerHTML = `
+      <h2>Ad Playing...</h2>
+      <p id="timer">15</p>
+    `;
+
+    let time = 15;
+    let interval = setInterval(() => {
+      time--;
+      document.getElementById("timer").innerText = time;
+
+      if (time <= 0) {
+        clearInterval(interval);
+        showQuestion();
+      }
+    }, 1000);
+  });
+}
+
+function showQuestion() {
+  document.getElementById("main").innerHTML = `
+    <h2>Quick question</h2>
+    <p>Which product did you see?</p>
+    <button onclick="complete()">Product A</button>
+    <button onclick="complete()">Product B</button>
+  `;
+}
+
+function complete() {
+  fetch('/event', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      creator: 'Alex',
+      user: userId,
+      type: 'ad_complete'
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    // if the server blocks this attempt
+    if (!data.success) {
+      document.getElementById("main").innerHTML = `
+        <h2>⛔ Slow down</h2>
+        <p>You already supported recently. Try again later.</p>
+        <button onclick="location.reload()">Go Back</button>
+      `;
+      return;
+    }
+
+    // only show success if server allows it
+    document.getElementById("main").innerHTML = `
+      <h2>You supported Alex 🎉</h2>
+      <p>Alex earned $0.05</p>
+      <button onclick="location.reload()">Support Again</button>
+    `;
+  });
+}
+</script>
+</body>
+</html>
+node server.js
+http://localhost:3000
+
+
+node server.js
+
+
+

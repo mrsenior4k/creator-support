@@ -67,19 +67,18 @@ app.post('/event', (req, res) => {
   }
 
   // ---------- Daily cap ----------
-  if (userData.dailyCount >= MAX_SUPPORTS_PER_DAY) {
+if (userData.dailyCount >= MAX_SUPPORTS_PER_DAY) {
   const nowDate = new Date();
 
-  // get next midnight
-  const tomorrow = new Date(nowDate);
-  tomorrow.setHours(24, 0, 0, 0);
+  const tomorrow = new Date();
+  tomorrow.setHours(24, 0, 0, 0); // next midnight
 
-  const waitMs = tomorrow - nowDate;
+  const waitSeconds = Math.floor((tomorrow - nowDate) / 1000);
 
   return res.json({
     success: false,
     message: "Daily limit reached",
-    wait: Math.ceil(waitMs / 1000)
+    wait: waitSeconds
   });
 }
 
